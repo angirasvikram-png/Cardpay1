@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CardPay — Bill Reminder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --border: #2a2a3a;
+    --accent: #f5a623;
+    --accent2: #00c9a7;
+    --danger: #ff4d6d;
+    --warn: #ffd166;
+    --text: #f0f0f5;
+    --muted: #7a7a9a;
+    --radius: 16px;
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+    padding-bottom: 100px;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+    padding: 56px 20px 28px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+  .date-badge {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface);
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    margin-top: 4px;
+  }
+
+  /* SUMMARY STRIP */
+  .summary {
+    display: flex;
+    gap: 10px;
+  }
+  .summary-card {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    text-align: center;
+  }
+  .summary-card.danger { border-color: rgba(255,77,109,0.4); background: rgba(255,77,109,0.07); }
+  .summary-card.warn   { border-color: rgba(255,209,102,0.4); background: rgba(255,209,102,0.07); }
+  .summary-card.ok     { border-color: rgba(0,201,167,0.4); background: rgba(0,201,167,0.07); }
+  .s-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+  }
+  .danger .s-num { color: var(--danger); }
+  .warn .s-num   { color: var(--warn); }
+  .ok .s-num     { color: var(--accent2); }
+  .s-label { font-size: 10px; color: var(--muted); margin-top: 1px; letter-spacing: 0.5px; text-transform: uppercase; }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    padding: 16px 20px 0;
+    gap: 6px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .tab {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 10px 10px 0 0;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* CARD LIST */
+  .section { padding: 16px 20px; }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+  .empty-state h3 { font-family: 'Syne', sans-serif; font-size: 16px; margin-bottom: 6px; color: var(--text); }
+
+  .card-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .card-item::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    border-radius: 4px 0 0 4px;
+  }
+  .card-item.overdue::before  { background: var(--danger); }
+  .card-item.due-soon::before { background: var(--warn); }
+  .card-item.upcoming::before { background: var(--accent2); }
+  .card-item.paid::before     { background: var(--muted); }
+  .card-item.paid { opacity: 0.55; }
+
+  .card-row1 { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .card-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text);
+  }
+  .card-bank { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .status-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .status-badge.overdue  { background: rgba(255,77,109,0.15); color: var(--danger); border: 1px solid rgba(255,77,109,0.3); }
+  .status-badge.due-soon { background: rgba(255,209,102,0.15); color: var(--warn); border: 1px solid rgba(255,209,102,0.3); }
+  .status-badge.upcoming { background: rgba(0,201,167,0.1); color: var(--accent2); border: 1px solid rgba(0,201,167,0.2); }
+  .status-badge.paid     { background: rgba(122,122,154,0.1); color: var(--muted); border: 1px solid var(--border); }
+
+  .card-row2 { display: flex; justify-content: space-between; align-items: center; }
+  .card-amount {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .card-amount span { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .card-due { font-size: 12px; color: var(--muted); }
+  .card-due strong { color: var(--text); font-weight: 500; }
+
+  .card-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .btn-sm {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    flex: 1;
+  }
+  .btn-sm:active { transform: scale(0.97); }
+  .btn-sm.pay {
+    background: rgba(0,201,167,0.12);
+    border-color: rgba(0,201,167,0.3);
+    color: var(--accent2);
+    font-weight: 600;
+  }
+  .btn-sm.unpay {
+    background: rgba(245,166,35,0.1);
+    border-color: rgba(245,166,35,0.3);
+    color: var(--accent);
+  }
+  .btn-sm.edit { color: var(--text); }
+  .btn-sm.del  { color: var(--danger); border-color: rgba(255,77,109,0.2); }
+
+  /* FAB */
+  .fab {
+    position: fixed;
+    bottom: 28px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #e8920f);
+    border: none;
+    font-size: 28px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 24px rgba(245,166,35,0.4);
+    cursor: pointer;
+    z-index: 100;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .fab:active { transform: scale(0.93); box-shadow: 0 3px 12px rgba(245,166,35,0.3); }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+    z-index: 200;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px 24px 0 0;
+    padding: 24px 20px 40px;
+    width: 100%;
+    max-width: 480px;
+    transform: translateY(40px);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-handle {
+    width: 40px; height: 4px;
+    background: var(--border);
+    border-radius: 4px;
+    margin: 0 auto 20px;
+  }
+  .modal h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 20px;
+    color: var(--text);
+  }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    margin-bottom: 7px;
+  }
+  .form-group input, .form-group select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    outline: none;
+    -webkit-appearance: none;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+  .form-group select option { background: var(--surface2); }
+
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+
+  .btn-primary {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), #e8920f);
+    border: none;
+    border-radius: 12px;
+    padding: 15px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: #fff;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: transform 0.15s;
+    box-shadow: 0 4px 16px rgba(245,166,35,0.3);
+  }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-cancel {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--muted);
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  /* HISTORY */
+  .history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .history-item:last-child { border-bottom: none; }
+  .history-name { font-size: 14px; font-weight: 500; }
+  .history-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .history-amount {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent2);
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 300;
+    opacity: 0;
+    transition: all 0.3s;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: rgba(0,201,167,0.4); color: var(--accent2); }
+
+  /* NOTIFICATION BANNER */
+  .notif-banner {
+    background: rgba(255,77,109,0.1);
+    border: 1px solid rgba(255,77,109,0.25);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--danger);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.7 } }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    margin-top: 4px;
+  }
+
+  /* settings */
+  .settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .settings-label { font-size: 14px; color: var(--text); }
+  .settings-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .toggle {
+    width: 44px; height: 24px;
+    background: var(--surface2);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--accent2); border-color: var(--accent2); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 18px; height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    transition: left 0.2s;
+  }
+  .toggle.on::after { left: 22px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="logo">Card<span>Pay</span></div>
+      <div class="date-badge" id="todayDate"></div>
+    </div>
+    <div id="totalDue" style="text-align:right">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:var(--accent)"></div>
+      <div style="font-size:11px;color:var(--muted)">Total Due</div>
+    </div>
+  </div>
+  <div class="summary">
+    <div class="summary-card danger"><div class="s-num" id="cntOverdue">0</div><div class="s-label">Overdue</div></div>
+    <div class="summary-card warn"><div class="s-num" id="cntSoon">0</div><div class="s-label">Due Soon</div></div>
+    <div class="summary-card ok"><div class="s-num" id="cntPaid">0</div><div class="s-label">Paid</div></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('pending')">Pending</button>
+  <button class="tab" onclick="switchTab('all')">All Cards</button>
+  <button class="tab" onclick="switchTab('history')">History</button>
+  <button class="tab" onclick="switchTab('settings')">Settings</button>
+</div>
+
+<!-- CONTENT -->
+<div id="tab-pending" class="section"></div>
+<div id="tab-all" class="section" style="display:none"></div>
+<div id="tab-history" class="section" style="display:none"></div>
+<div id="tab-settings" class="section" style="display:none">
+  <div class="section-title">Preferences</div>
+  <div class="settings-row">
+    <div><div class="settings-label">Due-Soon Warning</div><div class="settings-sub">Days before due date to warn</div></div>
+    <select id="warnDays" style="width:80px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-size:14px;outline:none" onchange="saveSettings()">
+      <option value="2">2 days</option>
+      <option value="3" selected>3 days</option>
+      <option value="5">5 days</option>
+      <option value="7">7 days</option>
+    </select>
+  </div>
+  <div class="settings-row">
+    <div><div class="settings-label">Browser Notifications</div><div class="settings-sub">Get reminded on page open</div></div>
+    <div class="toggle" id="notifToggle" onclick="toggleNotif()"></div>
+  </div>
+  <div class="settings-row" style="border:none">
+    <div><div class="settings-label">Clear All Data</div><div class="settings-sub">Reset the app completely</div></div>
+    <button onclick="clearAllData()" style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);color:var(--danger);border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer">Clear</button>
+  </div>
+</div>
+
+<!-- FAB -->
+<button class="fab" onclick="openModal()">+</button>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="cardModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 id="modalTitle">Add Card</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Card Name</label>
+        <input id="f-name" placeholder="e.g. HDFC Regalia" />
+      </div>
+      <div class="form-group">
+        <label>Bank</label>
+        <select id="f-bank">
+          <option value="">Select</option>
+          <option>HDFC</option><option>ICICI</option><option>SBI</option>
+          <option>Axis</option><option>Kotak</option><option>IDFC First</option>
+          <option>Yes Bank</option><option>AU Small Finance</option>
+          <option>IndusInd</option><option>RBL</option><option>Amex</option><option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Bill Amount (₹)</label>
+      <input id="f-amount" type="number" placeholder="e.g. 12500" inputmode="numeric" />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Due Date (Day of Month)</label>
+        <input id="f-day" type="number" min="1" max="31" placeholder="e.g. 15" inputmode="numeric" />
+      </div>
+      <div class="form-group">
+        <label>Min Due (₹)</label>
+        <input id="f-mindue" type="number" placeholder="optional" inputmode="numeric" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <input id="f-notes" placeholder="e.g. auto-debit enabled" />
+    </div>
+    <button class="btn-primary" onclick="saveCard()">Save Card</button>
+    <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────
+let cards = JSON.parse(localStorage.getItem('cardpay_cards') || '[]');
+let history = JSON.parse(localStorage.getItem('cardpay_history') || '[]');
+let settings = JSON.parse(localStorage.getItem('cardpay_settings') || '{"warnDays":3,"notif":false}');
+let editingId = null;
+let activeTab = 'pending';
+
+// ── UTILS ─────────────────────────────────────────────
+function save() {
+  localStorage.setItem('cardpay_cards', JSON.stringify(cards));
+  localStorage.setItem('cardpay_history', JSON.stringify(history));
+  localStorage.setItem('cardpay_settings', JSON.stringify(settings));
+}
+
+function today() { return new Date(); }
+
+function nextDueDate(dayOfMonth) {
+  const now = today();
+  const d = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
+  if (d < now) d.setMonth(d.getMonth() + 1);
+  return d;
+}
+
+function daysUntil(d) {
+  const diff = d - today();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
+function fmt(d) {
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function getStatus(card) {
+  if (card.paid) return 'paid';
+  const due = nextDueDate(card.day);
+  const days = daysUntil(due);
+  if (days < 0) return 'overdue';
+  if (days <= settings.warnDays) return 'due-soon';
+  return 'upcoming';
+}
+
+function statusLabel(s) {
+  if (s === 'overdue')  return 'Overdue';
+  if (s === 'due-soon') return 'Due Soon';
+  if (s === 'upcoming') return 'Upcoming';
+  if (s === 'paid')     return 'Paid ✓';
+}
+
+function fmtMoney(n) { return '₹' + Number(n).toLocaleString('en-IN'); }
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 2800);
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+// ── RENDER ─────────────────────────────────────────────
+function render() {
+  updateHeader();
+  renderPending();
+  renderAll();
+  renderHistory();
+  applySettings();
+}
+
+function updateHeader() {
+  document.getElementById('todayDate').textContent = today().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long' });
+
+  let overdue = 0, soon = 0, paid = 0, total = 0;
+  cards.forEach(c => {
+    const s = getStatus(c);
+    if (s === 'overdue') { overdue++; total += Number(c.amount || 0); }
+    else if (s === 'due-soon') { soon++; total += Number(c.amount || 0); }
+    else if (s === 'paid') paid++;
+    else total += Number(c.amount || 0);
+  });
+  document.getElementById('cntOverdue').textContent = overdue;
+  document.getElementById('cntSoon').textContent = soon;
+  document.getElementById('cntPaid').textContent = paid;
+  document.getElementById('totalDue').querySelector('div').textContent = fmtMoney(total);
+}
+
+function cardHTML(card) {
+  const status = getStatus(card);
+  const due = nextDueDate(card.day);
+  const days = daysUntil(due);
+  let dueStr = '';
+  if (status === 'paid')    dueStr = `Next due: <strong>${fmt(due)}</strong>`;
+  else if (status === 'overdue') dueStr = `<span style="color:var(--danger)">Overdue by ${Math.abs(days)} day${Math.abs(days)!==1?'s':''}</span>`;
+  else dueStr = `Due in <strong>${days} day${days!==1?'s':''}</strong> · ${fmt(due)}`;
+
+  const payBtn = status === 'paid'
+    ? `<button class="btn-sm unpay" onclick="unmarkPaid('${card.id}')">↩ Unpay</button>`
+    : `<button class="btn-sm pay" onclick="markPaid('${card.id}')">✓ Mark Paid</button>`;
+
+  return `
+    <div class="card-item ${status}" id="ci-${card.id}">
+      <div class="card-row1">
+        <div>
+          <div class="card-name">${card.name}</div>
+          <div class="card-bank">${card.bank || ''}${card.notes ? ' · ' + card.notes : ''}</div>
+        </div>
+        <span class="status-badge ${status}">${statusLabel(status)}</span>
+      </div>
+      <div class="card-row2">
+        <div class="card-amount">${fmtMoney(card.amount)} <span>total</span>${card.mindue ? `<br><span>Min: ${fmtMoney(card.mindue)}</span>` : ''}</div>
+        <div class="card-due">${dueStr}</div>
+      </div>
+      <div class="card-actions">
+        ${payBtn}
+        <button class="btn-sm edit" onclick="openEdit('${card.id}')">✎ Edit</button>
+        <button class="btn-sm del" onclick="deleteCard('${card.id}')">✕</button>
+      </div>
+    </div>`;
+}
+
+function renderPending() {
+  const el = document.getElementById('tab-pending');
+  const pending = cards.filter(c => !c.paid);
+  const overdue  = pending.filter(c => getStatus(c) === 'overdue');
+  const soon     = pending.filter(c => getStatus(c) === 'due-soon');
+  const upcoming = pending.filter(c => getStatus(c) === 'upcoming');
+
+  let html = '';
+  if (!pending.length) {
+    html = `<div class="empty-state"><div class="empty-icon">🎉</div><h3>All clear!</h3><p>No pending bills. Add a card to track.</p></div>`;
+  } else {
+    if (overdue.length) {
+      html += `<div class="notif-banner">⚠️ ${overdue.length} card${overdue.length>1?'s are':' is'} overdue!</div>`;
+    }
+    if (overdue.length)  { html += `<div class="section-title">Overdue</div>`; overdue.forEach(c => html += cardHTML(c)); }
+    if (soon.length)     { html += `<div class="section-title">Due Soon</div>`; soon.forEach(c => html += cardHTML(c)); }
+    if (upcoming.length) { html += `<div class="section-title">Upcoming</div>`; upcoming.forEach(c => html += cardHTML(c)); }
+  }
+  el.innerHTML = html;
+}
+
+function renderAll() {
+  const el = document.getElementById('tab-all');
+  if (!cards.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">💳</div><h3>No cards added</h3><p>Tap + to add your first card.</p></div>`;
+    return;
+  }
+  el.innerHTML = cards.map(c => cardHTML(c)).join('');
+}
+
+function renderHistory() {
+  const el = document.getElementById('tab-history');
+  if (!history.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>No payment history</h3><p>Paid bills will appear here.</p></div>`;
+    return;
+  }
+  const sorted = [...history].sort((a,b) => b.paidOn - a.paidOn);
+  let html = `<div class="section-title">Payment History (${history.length})</div>`;
+  html += sorted.map(h => `
+    <div class="history-item">
+      <div>
+        <div class="history-name">${h.name}</div>
+        <div class="history-date">${h.bank || ''} · Paid on ${new Date(h.paidOn).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</div>
+      </div>
+      <div class="history-amount">${fmtMoney(h.amount)}</div>
+    </div>`).join('');
+  el.innerHTML = html;
+}
+
+// ── ACTIONS ───────────────────────────────────────────
+function markPaid(id) {
+  const card = cards.find(c => c.id === id);
+  if (!card) return;
+  card.paid = true;
+  history.push({ id: uid(), cardId: id, name: card.name, bank: card.bank, amount: card.amount, paidOn: Date.now() });
+  save(); render();
+  showToast('✓ Payment marked for ' + card.name, 'success');
+}
+
+function unmarkPaid(id) {
+  const card = cards.find(c => c.id === id);
+  if (!card) return;
+  card.paid = false;
+  history = history.filter(h => !(h.cardId === id && h.paidOn > Date.now() - 86400000 * 31));
+  save(); render();
+  showToast('↩ Reverted to unpaid');
+}
+
+function deleteCard(id) {
+  if (!confirm('Delete this card?')) return;
+  cards = cards.filter(c => c.id !== id);
+  history = history.filter(h => h.cardId !== id);
+  save(); render();
+  showToast('Card removed');
+}
+
+// ── MODAL ─────────────────────────────────────────────
+function openModal(prefill) {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Add Card';
+  ['name','bank','amount','day','mindue','notes'].forEach(f => {
+    const el = document.getElementById('f-' + f);
+    el.value = prefill ? (prefill[f] || '') : '';
+  });
+  document.getElementById('cardModal').classList.add('open');
+}
+
+function openEdit(id) {
+  const card = cards.find(c => c.id === id);
+  if (!card) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Card';
+  ['name','bank','amount','day','mindue','notes'].forEach(f => {
+    document.getElementById('f-' + f).value = card[f] || '';
+  });
+  document.getElementById('cardModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('cardModal').classList.remove('open');
+}
+
+function saveCard() {
+  const name   = document.getElementById('f-name').value.trim();
+  const bank   = document.getElementById('f-bank').value;
+  const amount = document.getElementById('f-amount').value;
+  const day    = parseInt(document.getElementById('f-day').value);
+  const mindue = document.getElementById('f-mindue').value;
+  const notes  = document.getElementById('f-notes').value.trim();
+
+  if (!name)          { showToast('Enter card name'); return; }
+  if (!amount || isNaN(amount)) { showToast('Enter valid amount'); return; }
+  if (!day || day < 1 || day > 31) { showToast('Enter valid due day (1-31)'); return; }
+
+  if (editingId) {
+    const card = cards.find(c => c.id === editingId);
+    Object.assign(card, { name, bank, amount: Number(amount), day, mindue: Number(mindue)||0, notes });
+    showToast('Card updated ✓', 'success');
+  } else {
+    cards.push({ id: uid(), name, bank, amount: Number(amount), day, mindue: Number(mindue)||0, notes, paid: false });
+    showToast('Card added ✓', 'success');
+  }
+
+  save(); render(); closeModal();
+}
+
+// ── TABS ──────────────────────────────────────────────
+function switchTab(name) {
+  activeTab = name;
+  ['pending','all','history','settings'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === name ? '' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    el.classList.toggle('active', ['pending','all','history','settings'][i] === name);
+  });
+}
+
+// ── SETTINGS ─────────────────────────────────────────
+function applySettings() {
+  document.getElementById('warnDays').value = settings.warnDays;
+  document.getElementById('notifToggle').className = 'toggle' + (settings.notif ? ' on' : '');
+}
+
+function saveSettings() {
+  settings.warnDays = parseInt(document.getElementById('warnDays').value);
+  save(); render();
+}
+
+function toggleNotif() {
+  settings.notif = !settings.notif;
+  if (settings.notif && Notification.permission === 'default') {
+    Notification.requestPermission().then(p => {
+      if (p !== 'granted') settings.notif = false;
+      save(); applySettings();
+    });
+  } else {
+    save(); applySettings();
+  }
+}
+
+function clearAllData() {
+  if (!confirm('Clear ALL cards and history? This cannot be undone.')) return;
+  cards = []; history = [];
+  save(); render();
+  showToast('All data cleared');
+}
+
+// ── NOTIFICATIONS ──────────────────────────────────────
+function checkNotifications() {
+  if (!settings.notif || Notification.permission !== 'granted') return;
+  cards.forEach(c => {
+    const s = getStatus(c);
+    if (s === 'overdue' || s === 'due-soon') {
+      new Notification('CardPay Reminder 💳', {
+        body: `${c.name}: ${fmtMoney(c.amount)} — ${s === 'overdue' ? 'OVERDUE!' : 'Due soon'}`,
+        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💳</text></svg>'
+      });
+    }
+  });
+}
+
+// ── CLOSE MODAL ON BACKDROP ────────────────────────────
+document.getElementById('cardModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ── RESET PAID STATUS MONTHLY ─────────────────────────
+function autoResetPaid() {
+  const lastReset = localStorage.getItem('cardpay_lastReset');
+  const now = today();
+  const monthKey = `${now.getFullYear()}-${now.getMonth()}`;
+  if (lastReset !== monthKey) {
+    cards.forEach(c => {
+      // Only reset if due date hasn't passed yet this month
+      const due = new Date(now.getFullYear(), now.getMonth(), c.day);
+      if (now < due) c.paid = false;
+    });
+    localStorage.setItem('cardpay_lastReset', monthKey);
+    save();
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────
+autoResetPaid();
+render();
+setTimeout(checkNotifications, 2000);
+</script>
+</body>
+</html>
